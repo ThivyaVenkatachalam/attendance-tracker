@@ -2,9 +2,9 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import {
   LayoutDashboard, Users, ClipboardList,
-  FileText, LogOut, Menu, Upload, CalendarDays, Clock,
+  FileText, LogOut, Menu, Upload, CalendarDays, Clock, Moon, Sun,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const NAV_LINKS = {
   admin: [
@@ -43,7 +43,28 @@ const NAV_LINKS = {
   ],
 };
 
-function Sidebar({ open, onClose }) {
+// ── Dark mode hook ────────────────────────────────────────────
+function useDarkMode() {
+  const [dark, setDark] = useState(() => {
+    const saved = localStorage.getItem('attendease-dark-mode');
+    if (saved !== null) return saved === 'true';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (dark) {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    localStorage.setItem('attendease-dark-mode', String(dark));
+  }, [dark]);
+
+  return [dark, setDark];
+}
+
+function Sidebar({ open, onClose, dark, onToggleDark }) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const links = NAV_LINKS[user?.role] ?? [];
@@ -69,24 +90,26 @@ function Sidebar({ open, onClose }) {
       )}
 
       <aside className={`
-        fixed top-0 left-0 h-full w-64 bg-white border-r border-neutral-200
+        fixed top-0 left-0 h-full w-64
+        bg-white dark:bg-neutral-900
+        border-r border-neutral-200 dark:border-neutral-700
         z-30 flex flex-col transition-transform duration-200
         ${open ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0
       `}>
         {/* Logo */}
-        <div className="p-5 border-b border-neutral-200">
-          <h1 className="text-lg font-bold text-neutral-900">📋 AttendEase</h1>
+        <div className="p-5 border-b border-neutral-200 dark:border-neutral-700">
+          <h1 className="text-lg font-bold text-neutral-900 dark:text-white">📋 AttendEase</h1>
           <p className="text-xs text-neutral-400 mt-0.5">Attendance Management</p>
         </div>
 
         {/* User info */}
-        <div className="p-4 border-b border-neutral-200">
+        <div className="p-4 border-b border-neutral-200 dark:border-neutral-700">
           <div className="flex items-center gap-3">
             <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold ${roleColors[user?.role]}`}>
               {user?.name?.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium text-neutral-900 truncate">{user?.name}</p>
+              <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">{user?.name}</p>
               <p className="text-xs text-neutral-400 capitalize">{user?.role}</p>
             </div>
           </div>
@@ -103,8 +126,8 @@ function Sidebar({ open, onClose }) {
                 flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm
                 font-medium transition-colors mb-0.5
                 ${isActive
-                  ? 'bg-primary-light text-primary'
-                  : 'text-neutral-600 hover:bg-neutral-100'
+                  ? 'bg-primary-light text-primary dark:bg-primary/20 dark:text-primary'
+                  : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800'
                 }
               `}
             >
@@ -114,12 +137,40 @@ function Sidebar({ open, onClose }) {
           ))}
         </nav>
 
-        {/* Logout */}
-        <div className="p-3 border-t border-neutral-200">
+        {/* Dark mode toggle + Logout */}
+        <div className="p-3 border-t border-neutral-200 dark:border-neutral-700 space-y-1">
+          {/* Dark mode toggle */}
+          <button
+            onClick={() => onToggleDark(!dark)}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm
+                       font-medium text-neutral-600 dark:text-neutral-300
+                       hover:bg-neutral-100 dark:hover:bg-neutral-800
+                       transition-colors w-full"
+          >
+            {dark ? <Sun size={18} /> : <Moon size={18} />}
+            {dark ? 'Light Mode' : 'Dark Mode'}
+            {/* Toggle pill */}
+            <span className="ml-auto">
+              <span className={`
+                inline-flex h-5 w-9 rounded-full transition-colors duration-200
+                ${dark ? 'bg-primary' : 'bg-neutral-300'}
+                relative
+              `}>
+                <span className={`
+                  absolute top-0.5 h-4 w-4 rounded-full bg-white shadow
+                  transition-transform duration-200
+                  ${dark ? 'translate-x-4' : 'translate-x-0.5'}
+                `} />
+              </span>
+            </span>
+          </button>
+
+          {/* Logout */}
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm
-                       font-medium text-neutral-600 hover:bg-danger-light hover:text-danger
+                       font-medium text-neutral-600 dark:text-neutral-300
+                       hover:bg-danger-light hover:text-danger dark:hover:bg-red-900/30 dark:hover:text-red-400
                        transition-colors w-full"
           >
             <LogOut size={18} />
@@ -133,19 +184,33 @@ function Sidebar({ open, onClose }) {
 
 export function AppLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [dark, setDark] = useDarkMode();
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 transition-colors duration-200">
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        dark={dark}
+        onToggleDark={setDark}
+      />
 
       {/* Main content */}
       <div className="lg:pl-64 flex flex-col min-h-screen">
         {/* Mobile header */}
-        <header className="lg:hidden sticky top-0 z-10 bg-white border-b border-neutral-200 px-4 py-3 flex items-center gap-3">
+        <header className="lg:hidden sticky top-0 z-10 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700 px-4 py-3 flex items-center gap-3">
           <button onClick={() => setSidebarOpen(true)}>
-            <Menu size={22} className="text-neutral-600" />
+            <Menu size={22} className="text-neutral-600 dark:text-neutral-300" />
           </button>
-          <h1 className="font-semibold text-neutral-900">AttendEase</h1>
+          <h1 className="font-semibold text-neutral-900 dark:text-white">AttendEase</h1>
+
+          {/* Dark mode toggle on mobile header too */}
+          <button
+            onClick={() => setDark(!dark)}
+            className="ml-auto p-1.5 rounded-lg text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+          >
+            {dark ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
         </header>
 
         <main className="flex-1 p-6">
