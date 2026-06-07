@@ -5,7 +5,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary:  { DEFAULT: '#4F46E5', hover: '#4338CA', light: '#EEF2FF' },
+        primary: { DEFAULT: '#0F6E56', hover: '#085041', light: '#E1F5EE' },
         success:  { DEFAULT: '#16A34A', light: '#DCFCE7' },
         warning:  { DEFAULT: '#D97706', light: '#FEF3C7' },
         danger:   { DEFAULT: '#DC2626', light: '#FEE2E2' },
