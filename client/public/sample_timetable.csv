@@ -1,0 +1,4 @@
+subject,faculty_email,department,semester,session_date,start_time,end_time,room
+Data Structures,priya.sharma@college.edu,Computer Science,3,2026-06-08,09:00,10:00,Lab 1
+Database Management,arjun.nair@college.edu,Computer Science,3,2026-06-08,10:00,11:00,Room 204
+Operating Systems,arjun.nair@college.edu,Computer Science,5,2026-06-09,11:00,12:00,Room 305
