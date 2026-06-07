@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '@/api/axiosInstance';
 import { Badge, Spinner, EmptyState } from '@/components/shared';
-import { Search } from 'lucide-react';
+import { Search, Download } from 'lucide-react';
 
 export default function AdminStudents() {
   const [students, setStudents] = useState([]);
@@ -38,9 +38,46 @@ export default function AdminStudents() {
     fetchStudents();
   }, [search, dept, sem, minAttendance, maxAttendance, leaveStatus]);
 
+  // ── Export CSV ───────────────────────────────────────────────
+  const exportCSV = () => {
+    if (students.length === 0) return;
+
+    const headers = ['Roll No', 'Name', 'Email', 'Department', 'Semester', 'Attendance %', 'Leave Status'];
+    const rows = students.map((s) => [
+      s.roll_no,
+      s.name,
+      s.email,
+      s.department,
+      `Sem ${s.semester}`,
+      Number(s.attendance_pct ?? 0).toFixed(2),
+      s.leave_status || 'None',
+    ]);
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${cell}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `students_attendance_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-neutral-900">Students</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-neutral-900">Students</h1>
+        <button
+          className="btn-secondary text-sm inline-flex items-center gap-2"
+          onClick={exportCSV}
+          disabled={students.length === 0}
+        >
+          <Download size={16} /> Export CSV
+        </button>
+      </div>
 
       <div className="card p-4 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
         <div className="relative md:col-span-2">
