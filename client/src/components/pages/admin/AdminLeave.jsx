@@ -15,7 +15,8 @@ export default function AdminLeave() {
 
   const title = user?.role === 'hod' ? 'Leave Approvals' : 'Leave Requests';
 
-  const tabs = ['pending', 'recommended', 'approved', 'rejected'];
+  // Removed 'recommended' tab since faculty no longer recommends
+  const tabs = ['pending', 'approved', 'rejected'];
 
   const actionMap = useMemo(() => ({
     hod: {
@@ -23,20 +24,16 @@ export default function AdminLeave() {
         { action: 'approved', label: 'Approve', icon: CheckCircle, className: 'btn-success' },
         { action: 'rejected', label: 'Reject', icon: XCircle, className: 'btn-danger' },
       ],
-      recommended: [
-        { action: 'approved', label: 'Final Approve', icon: CheckCircle, className: 'btn-success' },
-        { action: 'rejected', label: 'Reject', icon: XCircle, className: 'btn-danger' },
-      ],
+      approved: [],
+      rejected: [],
     },
     admin: {
       pending: [
         { action: 'approved', label: 'Approve', icon: CheckCircle, className: 'btn-success' },
         { action: 'rejected', label: 'Reject', icon: XCircle, className: 'btn-danger' },
       ],
-      recommended: [
-        { action: 'approved', label: 'Approve', icon: CheckCircle, className: 'btn-success' },
-        { action: 'rejected', label: 'Reject', icon: XCircle, className: 'btn-danger' },
-      ],
+      approved: [],
+      rejected: [],
     },
   }), []);
 
@@ -101,11 +98,6 @@ export default function AdminLeave() {
                         <p className="text-sm text-neutral-500 bg-neutral-50 rounded-lg px-3 py-2">
                           {leave.reason}
                         </p>
-                        {leave.recommended_by_name && (
-                          <p className="text-xs text-neutral-400 mt-2">
-                            Recommended by {leave.recommended_by_name}
-                          </p>
-                        )}
                       </div>
 
                       {actions.length > 0 && (
