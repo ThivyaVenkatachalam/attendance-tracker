@@ -20,6 +20,13 @@ const envSchema = z.object({
 
   CLIENT_URL:           z.string().url(),
   LOG_LEVEL:            z.enum(['error','warn','info','http','debug']).default('info'),
+
+  // Email / SMTP
+  SMTP_HOST:            z.string().default('smtp.gmail.com'),
+  SMTP_PORT:            z.coerce.number().default(587),
+  SMTP_USER:            z.string().email().optional(),
+  SMTP_PASS:            z.string().optional(),
+  SMTP_FROM:            z.string().default('AttendEase <no-reply@attendease.com>'),
 });
 
 const parsed = envSchema.safeParse(process.env);
