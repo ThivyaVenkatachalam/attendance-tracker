@@ -4,6 +4,7 @@
 
 | Task | AI Used | Accepted | Modified | Rejected | Why |
 |------|---------|----------|----------|----------|-----|
+| `/metrics` endpoint auth — AI assumed token in `localStorage` under key `'token'` | Claude | Partial | Changed to `sessionStorage.getItem('accessToken')` — AI assumed wrong storage type and key name | Initial fetch snippet | AI made an assumption about auth storage without checking the implementation; fetch returned `Bearer null` and failed with TOKEN_EXPIRED |
 | Generate database schema (users, sessions, attendance_records, leave_requests) | Claude | Yes | Added `version` column manually for OCC | - | AI generated correct base schema but missed versioning for optimistic concurrency |
 | Write seed SQL with realistic attendance data | ChatGPT | Partial | Changed attendance percentages to ensure some students fall below 75% | - | AI generated uniform data; needed realistic variation for warning system demo |
 | CSV import backend logic | Claude | Partial | Had to fix idempotency — AI did not check for existing records before inserting, always counted all rows as "imported" | Skipped count logic | AI missed the skipped vs imported distinction entirely |

@@ -24,7 +24,7 @@ A full-stack attendance management system for colleges, supporting multiple role
 Roles:   Admin ──▶ Full access, approve/reject leave, view all dashboards
          Faculty ──▶ Mark attendance for assigned sessions only
          Student ──▶ View own attendance, submit leave requests
-         HOD ──▶ Department-level oversight
+         HOD ──▶ Department-level oversight (read-only, no approval actions)
          Parent ──▶ View linked student attendance
 ```
 
@@ -174,14 +174,14 @@ All filters are combinable and applied in a single query for performance.
 
 ## Draft Recovery
 
-Unsaved attendance changes survive a page refresh using `sessionStorage`:
+Unsaved attendance changes survive a page refresh using **IndexedDB** via a custom `useDraft` hook:
 
 - Each attendance session gets its own draft key: `draft_session_{sessionId}`
 - On page load, if a draft exists, a banner appears: *"You have unsaved changes from your last session"*
 - Faculty can restore or discard the draft
 
 **Limitations:**
-- Drafts are stored in `sessionStorage` — cleared when the browser tab is closed
+- Drafts are stored in IndexedDB — persists across page refreshes and browser restarts, but scoped to the browser/device
 - Drafts do not sync across multiple tabs or devices
 - Only one draft per session ID is kept at a time
 - Drafts do not expire automatically
@@ -200,6 +200,10 @@ Version-based conflict detection on attendance updates:
    - **Compare Changes** — side-by-side diff of local vs server value
 
 ## Observability
+
+**Email Alerts** sent to parents when a student's attendance drops below 75%:
+- Triggered on every attendance save that causes a student to cross the threshold
+- Real SMTP delivery confirmed — parents receive live email notifications
 
 **Structured Audit Logs** saved to `audit_logs` table for every:
 - Attendance create / update / bulk / CSV import
