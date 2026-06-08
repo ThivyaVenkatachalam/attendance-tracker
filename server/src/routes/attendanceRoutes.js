@@ -14,6 +14,7 @@ import {
   markAttendance,
   bulkMarkAttendance,
   updateAttendance,
+  createTimetableSession,
   importCSV,
   importTimetableCSV,
   csvUpload,
@@ -36,6 +37,12 @@ router.get('/me',
 router.get('/sessions',
   authorize('admin', 'faculty'),
   listSessions
+);
+
+// Admin / HOD: add a timetable session
+router.post('/sessions',
+  authorize('admin', 'hod'),
+  createTimetableSession
 );
 
 // Faculty / Admin: get a session + its records

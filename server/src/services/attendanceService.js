@@ -28,6 +28,65 @@ export const listSessionsForFaculty = async (userId, filters, userRole) => {
   return attendanceModel.findSessionsByFaculty(userId, filters);
 };
 
+export const createTimetableSession = async (payload, createdBy) => {
+  const subject = payload.subject?.trim();
+  const department = payload.department?.trim();
+  const semester = Number(payload.semester);
+  const session_date = payload.session_date?.trim();
+  const start_time = payload.start_time?.trim() || null;
+  const end_time = payload.end_time?.trim() || null;
+  const room = payload.room?.trim() || null;
+  const faculty_id = Number(payload.faculty_id);
+
+  if (!subject || !department || !semester || !session_date || !faculty_id) {
+    throw new AppError('Subject, faculty, department, semester, and date are required', 422, 'VALIDATION_ERROR');
+  }
+
+  if (semester < 1 || semester > 8) {
+    throw new AppError('Semester must be between 1 and 8', 422, 'VALIDATION_ERROR');
+  }
+
+  if (start_time && end_time && start_time >= end_time) {
+    throw new AppError('End time must be after start time', 422, 'VALIDATION_ERROR');
+  }
+
+  if (createdBy.role === 'hod' && createdBy.department !== department) {
+    throw new AppError('HOD can add timetable sessions only for their own department', 403, 'FORBIDDEN');
+  }
+
+  const faculty = await sessionModel.findFacultyForSessionImport({ faculty_id });
+  if (!faculty) {
+    throw new AppError('Faculty not found', 404, 'FACULTY_NOT_FOUND');
+  }
+
+  if (createdBy.role === 'hod' && faculty.department !== createdBy.department) {
+    throw new AppError('HOD can assign only faculty from their own department', 403, 'FORBIDDEN');
+  }
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const sessionId = await sessionModel.createSession({
+      subject,
+      faculty_id,
+      department,
+      semester,
+      session_date,
+      start_time,
+      end_time,
+      room,
+    }, conn);
+    await sessionModel.assignFacultyToSession(faculty_id, sessionId, conn);
+    await conn.commit();
+    return sessionModel.findSessionById(sessionId);
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+};
+
 // ─── Mark / Update Attendance (OCC) ─────────────────────────────────────────
 
 /**

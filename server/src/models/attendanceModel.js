@@ -15,10 +15,12 @@ export const findSessionById = async (sessionId) => {
 
 export const findSessionsByFaculty = async (facultyId, filters = {}) => {
   let sql = `
-    SELECT s.*, 
+    SELECT s.*,
+      u.name AS faculty_name,
       COUNT(ar.id) AS marked_count,
       SUM(ar.status = 'present') AS present_count
     FROM sessions s
+    JOIN users u ON u.id = s.faculty_id
     LEFT JOIN attendance_records ar ON ar.session_id = s.id
     WHERE s.faculty_id = ?
   `;
@@ -36,10 +38,12 @@ export const findSessionsByFaculty = async (facultyId, filters = {}) => {
 
 export const findAllSessions = async (filters = {}) => {
   let sql = `
-    SELECT s.*, 
+    SELECT s.*,
+      u.name AS faculty_name,
       COUNT(ar.id) AS marked_count,
       SUM(ar.status = 'present') AS present_count
     FROM sessions s
+    JOIN users u ON u.id = s.faculty_id
     LEFT JOIN attendance_records ar ON ar.session_id = s.id
     WHERE 1=1
   `;

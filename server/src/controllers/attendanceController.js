@@ -39,6 +39,34 @@ export const listSessions = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+export const createTimetableSession = async (req, res, next) => {
+  const t0 = Date.now();
+  try {
+    const data = await attendanceService.createTimetableSession(req.body, req.user);
+    const latencyMs = Date.now() - t0;
+    auditLog({
+      actorId: req.user.id,
+      studentId: null,
+      action: 'timetable.create',
+      status: 'success',
+      latencyMs,
+      meta: { session_id: data.id, subject: data.subject },
+    });
+    return created(res, data, 'Timetable session created');
+  } catch (err) {
+    const latencyMs = Date.now() - t0;
+    auditLog({
+      actorId: req.user?.id,
+      studentId: null,
+      action: 'timetable.create',
+      status: 'failure',
+      latencyMs,
+      meta: { error_code: err.code },
+    });
+    next(err);
+  }
+};
+
 // ─── Mark Attendance ─────────────────────────────────────────────────────────
 
 export const markAttendance = async (req, res, next) => {

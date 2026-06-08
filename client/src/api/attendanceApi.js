@@ -13,6 +13,9 @@ export const attendanceApi = {
   // Bulk mark for a session
   bulkMark:       (sessionId, records) => api.post(`/attendance/sessions/${sessionId}/bulk`, { records }),
 
+  // Manual timetable session
+  createSession:  (data)            => api.post('/attendance/sessions', data),
+
   // CSV import
   importCSV:      (formData)        => api.post('/attendance/import', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
