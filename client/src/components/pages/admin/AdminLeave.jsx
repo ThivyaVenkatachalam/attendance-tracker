@@ -2,35 +2,27 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLeaveStore } from '@/store/leaveStore';
 import { useAuthStore } from '@/store/authStore';
 import { Badge, Spinner, EmptyState, ConfirmDialog } from '@/components/shared';
-import { FileText, CheckCircle, XCircle, Send } from 'lucide-react';
+import { FileText, CheckCircle, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function AdminLeave() {
   const { leaves, loading, fetchAll, reviewLeave } = useLeaveStore();
   const { user } = useAuthStore();
-  const [filter, setFilter] = useState(user?.role === 'hod' ? 'recommended' : 'pending');
+  const [filter, setFilter] = useState('pending');
   const [confirm, setConfirm] = useState(null);
 
   useEffect(() => { fetchAll({ status: filter }); }, [filter]);
 
-  const title = user?.role === 'faculty'
-    ? 'Leave Reviews'
-    : user?.role === 'hod'
-      ? 'Leave Approvals'
-      : 'Leave Requests';
+  const title = user?.role === 'hod' ? 'Leave Approvals' : 'Leave Requests';
 
-  const tabs = user?.role === 'faculty'
-    ? ['pending', 'recommended', 'rejected']
-    : ['pending', 'recommended', 'approved', 'rejected'];
+  const tabs = ['pending', 'recommended', 'approved', 'rejected'];
 
   const actionMap = useMemo(() => ({
-    faculty: {
+    hod: {
       pending: [
-        { action: 'recommended', label: 'Recommend', icon: Send, className: 'btn-primary' },
+        { action: 'approved', label: 'Approve', icon: CheckCircle, className: 'btn-success' },
         { action: 'rejected', label: 'Reject', icon: XCircle, className: 'btn-danger' },
       ],
-    },
-    hod: {
       recommended: [
         { action: 'approved', label: 'Final Approve', icon: CheckCircle, className: 'btn-success' },
         { action: 'rejected', label: 'Reject', icon: XCircle, className: 'btn-danger' },
@@ -56,24 +48,15 @@ export default function AdminLeave() {
     fetchAll({ status: filter });
   };
 
-  const confirmTitle = confirm?.action === 'recommended'
-    ? 'Recommend Leave'
-    : confirm?.action === 'approved'
-      ? 'Approve Leave'
-      : 'Reject Leave';
-
-  const confirmLabel = confirm?.action === 'recommended'
-    ? 'Yes, Recommend'
-    : confirm?.action === 'approved'
-      ? 'Yes, Approve'
-      : 'Yes, Reject';
+  const confirmTitle = confirm?.action === 'approved' ? 'Approve Leave' : 'Reject Leave';
+  const confirmLabel = confirm?.action === 'approved' ? 'Yes, Approve' : 'Yes, Reject';
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">{title}</h1>
         <p className="text-sm text-neutral-500 mt-1">
-          Student applies, class tutor recommends, HOD gives final approval.
+          Students submit leave requests. HOD and Admin can approve or reject.
         </p>
       </div>
 
@@ -151,7 +134,7 @@ export default function AdminLeave() {
         onClose={() => setConfirm(null)}
         onConfirm={handleReview}
         title={confirmTitle}
-        message={`Are you sure you want to ${confirm?.action} this leave request? Final approval updates matching absence records to leave.`}
+        message={`Are you sure you want to ${confirm?.action} this leave request? This will update matching absence records.`}
         confirmLabel={confirmLabel}
         variant={confirm?.action === 'rejected' ? 'danger' : 'success'}
       />

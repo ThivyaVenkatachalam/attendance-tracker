@@ -24,7 +24,6 @@ const NAV_LINKS = {
   faculty: [
     { to: '/faculty/dashboard', label: 'Dashboard',      icon: LayoutDashboard },
     { to: '/faculty/sessions',  label: 'My Sessions',    icon: ClipboardList   },
-    { to: '/faculty/leave',     label: 'Leave Reviews',  icon: FileText        },
     { to: '/faculty/timetable', label: 'Timetable',      icon: Clock           },
     { to: '/faculty/import',    label: 'Import CSV',     icon: Upload          },
   ],
