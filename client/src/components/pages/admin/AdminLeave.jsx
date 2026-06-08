@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLeaveStore } from '@/store/leaveStore';
 import { useAuthStore } from '@/store/authStore';
 import { Badge, Spinner, EmptyState, ConfirmDialog } from '@/components/shared';
@@ -13,31 +13,17 @@ export default function AdminLeave() {
 
   useEffect(() => { fetchAll({ status: filter }); }, [filter]);
 
-  const title = user?.role === 'hod' ? 'Leave Approvals' : 'Leave Requests';
-
-  // Removed 'recommended' tab since faculty no longer recommends
   const tabs = ['pending', 'approved', 'rejected'];
 
-  const actionMap = useMemo(() => ({
-    hod: {
-      pending: [
-        { action: 'approved', label: 'Approve', icon: CheckCircle, className: 'btn-success' },
-        { action: 'rejected', label: 'Reject', icon: XCircle, className: 'btn-danger' },
-      ],
-      approved: [],
-      rejected: [],
-    },
-    admin: {
-      pending: [
-        { action: 'approved', label: 'Approve', icon: CheckCircle, className: 'btn-success' },
-        { action: 'rejected', label: 'Reject', icon: XCircle, className: 'btn-danger' },
-      ],
-      approved: [],
-      rejected: [],
-    },
-  }), []);
-
-  const getActions = (leave) => actionMap[user?.role]?.[leave.status] ?? [];
+  // Only admin can approve/reject
+  const getActions = (leave) => {
+    if (user?.role !== 'admin') return [];
+    if (leave.status !== 'pending') return [];
+    return [
+      { action: 'approved', label: 'Approve', icon: CheckCircle, className: 'btn-success' },
+      { action: 'rejected', label: 'Reject', icon: XCircle, className: 'btn-danger' },
+    ];
+  };
 
   const handleReview = async () => {
     if (!confirm) return;
@@ -51,9 +37,13 @@ export default function AdminLeave() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">{title}</h1>
+        <h1 className="text-2xl font-bold text-neutral-900">
+          {user?.role === 'hod' ? 'Leave Requests' : 'Leave Requests'}
+        </h1>
         <p className="text-sm text-neutral-500 mt-1">
-          Students submit leave requests. HOD and Admin can approve or reject.
+          {user?.role === 'admin'
+            ? 'Review and approve or reject student leave requests.'
+            : 'View leave requests from your department students.'}
         </p>
       </div>
 

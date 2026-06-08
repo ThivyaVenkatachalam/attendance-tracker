@@ -39,7 +39,7 @@ export const getLeaveById = async (leaveId, requestingUser) => {
   if (requestingUser.role === 'student' && leave.student_id !== requestingUser.id) {
     throw new AppError('Access denied', 403, 'FORBIDDEN');
   }
-  if (['hod'].includes(requestingUser.role) && requestingUser.department !== leave.department) {
+  if (requestingUser.role === 'hod' && requestingUser.department !== leave.department) {
     throw new AppError('Access denied', 403, 'FORBIDDEN');
   }
 
@@ -52,16 +52,21 @@ export const getMyLeaves = async (studentId, filters) => {
 
 export const getAllLeaves = async (filters, requestingUser = null) => {
   const scoped = { ...filters };
+  // HOD can only view their department leaves (read only)
   if (requestingUser?.role === 'hod') {
     scoped.department = requestingUser.department;
   }
   return leaveModel.findAllLeaves(scoped);
 };
 
-// ─── Approve / Reject (Admin and HOD only) ───────────────────────────────────
+// ─── Approve / Reject (Admin ONLY) ───────────────────────────────────────────
 
 export const reviewLeave = async (leaveId, { status, admin_note }, admin) => {
-  // Only approved or rejected — no more recommended
+  // Only admin can approve or reject
+  if (admin.role !== 'admin') {
+    throw new AppError('Only Admin can approve or reject leave requests', 403, 'FORBIDDEN');
+  }
+
   if (!['approved', 'rejected'].includes(status)) {
     throw new AppError('status must be "approved" or "rejected"', 400, 'INVALID_STATUS');
   }
@@ -69,13 +74,7 @@ export const reviewLeave = async (leaveId, { status, admin_note }, admin) => {
   const leave = await leaveModel.findLeaveById(leaveId);
   if (!leave) throw new AppError('Leave request not found', 404, 'LEAVE_NOT_FOUND');
 
-  // HOD can only manage their department
-  if (admin.role === 'hod' && admin.department !== leave.department) {
-    throw new AppError('Leave request is outside your department', 403, 'FORBIDDEN');
-  }
-
-  // Only pending leaves can be reviewed
-  if (!['pending'].includes(leave.status)) {
+  if (leave.status !== 'pending') {
     throw new AppError(`Leave is already ${leave.status}`, 409, 'LEAVE_ALREADY_REVIEWED');
   }
 
@@ -83,13 +82,12 @@ export const reviewLeave = async (leaveId, { status, admin_note }, admin) => {
   if (affected === 0) throw new AppError('Update failed — leave may have been modified', 409, 'CONCURRENT_UPDATE');
 
   logger.info({
-    actor_id: admin.id,
-    action:   `leave_${status}`,
-    leave_id: leaveId,
+    actor_id:   admin.id,
+    action:     `leave_${status}`,
+    leave_id:   leaveId,
     student_id: leave.student_id,
   });
 
-  // If approved, update attendance records to leave status
   let adjustedAttendance = null;
   if (status === 'approved') {
     await leaveModel.markAttendanceAsLeave(leave.student_id, leave.start_date, leave.end_date, admin.id);
