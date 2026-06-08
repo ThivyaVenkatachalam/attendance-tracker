@@ -92,7 +92,8 @@ export const updateLeaveStatus = async (id, status, reviewedBy, adminNote) => {
 };
 
 export const markAttendanceAsLeave = async (studentId, startDate, endDate, markedBy) => {
-  const [result] = await pool.query(
+  // 1. Update existing absent/present records to leave
+  await pool.query(
     `UPDATE attendance_records ar
      JOIN sessions s ON s.id = ar.session_id
      SET ar.status = 'leave',
@@ -100,10 +101,26 @@ export const markAttendanceAsLeave = async (studentId, startDate, endDate, marke
          ar.version = ar.version + 1,
          ar.updated_at = NOW()
      WHERE ar.student_id = ?
-       AND ar.status = 'absent'
+       AND ar.status IN ('absent', 'present')
        AND DATE(s.session_date) BETWEEN ? AND ?`,
     [markedBy, studentId, startDate, endDate]
   );
+
+  // 2. Insert leave records for sessions that don't have attendance yet
+  const [result] = await pool.query(
+    `INSERT IGNORE INTO attendance_records (session_id, student_id, status, marked_by)
+     SELECT s.id, ?, 'leave', ?
+     FROM sessions s
+     JOIN users u ON u.department = s.department AND u.semester = s.semester
+     WHERE u.id = ?
+       AND DATE(s.session_date) BETWEEN ? AND ?
+       AND NOT EXISTS (
+         SELECT 1 FROM attendance_records ar2
+         WHERE ar2.session_id = s.id AND ar2.student_id = ?
+       )`,
+    [studentId, markedBy, studentId, startDate, endDate, studentId]
+  );
+
   return result.affectedRows;
 };
 
