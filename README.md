@@ -18,7 +18,7 @@ A full-stack attendance management system for colleges, supporting multiple role
          │
          ├── Zustand (global state)
          ├── React Router (role-based routing)
-         ├── Draft Recovery (sessionStorage per session)
+         ├── Draft Recovery (IndexedDB per session)
          └── ConflictResolver UI (Reload / Retry / Compare)
 
 Roles:   Admin ──▶ Full access, approve/reject leave, view all dashboards
