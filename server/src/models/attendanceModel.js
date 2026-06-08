@@ -18,7 +18,8 @@ export const findSessionsByFaculty = async (facultyId, filters = {}) => {
     SELECT s.*,
       u.name AS faculty_name,
       COUNT(ar.id) AS marked_count,
-      SUM(ar.status = 'present') AS present_count
+      SUM(ar.status = 'present') AS present_count,
+      CASE WHEN COUNT(ar.id) > 0 THEN 1 ELSE 0 END AS attendance_submitted
     FROM sessions s
     JOIN users u ON u.id = s.faculty_id
     LEFT JOIN attendance_records ar ON ar.session_id = s.id
@@ -41,7 +42,8 @@ export const findAllSessions = async (filters = {}) => {
     SELECT s.*,
       u.name AS faculty_name,
       COUNT(ar.id) AS marked_count,
-      SUM(ar.status = 'present') AS present_count
+      SUM(ar.status = 'present') AS present_count,
+      CASE WHEN COUNT(ar.id) > 0 THEN 1 ELSE 0 END AS attendance_submitted
     FROM sessions s
     JOIN users u ON u.id = s.faculty_id
     LEFT JOIN attendance_records ar ON ar.session_id = s.id
@@ -150,12 +152,7 @@ export const updateRecordWithVersion = async (id, status, expectedVersion) => {
 };
 
 export const updateRecordBySessionStudentWithVersion = async (
-  sessionId,
-  studentId,
-  status,
-  expectedVersion,
-  markedBy,
-  connection
+  sessionId, studentId, status, expectedVersion, markedBy, connection
 ) => {
   const conn = connection || pool;
   const [result] = await conn.query(
@@ -171,16 +168,10 @@ export const updateRecordBySessionStudentWithVersion = async (
 };
 
 export const insertRecordWithVersion = async (
-  sessionId,
-  studentId,
-  status,
-  markedBy,
-  expectedVersion = 0,
-  connection
+  sessionId, studentId, status, markedBy, expectedVersion = 0, connection
 ) => {
   const conn = connection || pool;
   if (expectedVersion !== 0) return { inserted: false, conflict: true };
-
   try {
     const [result] = await conn.query(
       `INSERT INTO attendance_records (session_id, student_id, status, marked_by, version)
@@ -202,10 +193,10 @@ export const bulkUpsertRecords = async (records, connection) => {
     `INSERT INTO attendance_records (session_id, student_id, status, marked_by)
      VALUES ?
      ON DUPLICATE KEY UPDATE
-       marked_by = IF(status <> VALUES(status), VALUES(marked_by), marked_by),
-       version  = IF(status <> VALUES(status), version + 1, version),
+       marked_by  = IF(status <> VALUES(status), VALUES(marked_by), marked_by),
+       version    = IF(status <> VALUES(status), version + 1, version),
        updated_at = IF(status <> VALUES(status), NOW(), updated_at),
-       status   = IF(status <> VALUES(status), VALUES(status), status)`,
+       status     = IF(status <> VALUES(status), VALUES(status), status)`,
     [values]
   );
   return result;
@@ -241,11 +232,9 @@ export const getStudentAttendanceSummary = async (studentId, filters = {}) => {
     WHERE ar.student_id = ?
   `;
   const params = [studentId];
-
-  if (filters.subject)    { sql += ' AND s.subject = ?';            params.push(filters.subject); }
-  if (filters.start_date) { sql += ' AND s.session_date >= ?';      params.push(filters.start_date); }
-  if (filters.end_date)   { sql += ' AND s.session_date <= ?';      params.push(filters.end_date); }
-
+  if (filters.subject)    { sql += ' AND s.subject = ?';       params.push(filters.subject); }
+  if (filters.start_date) { sql += ' AND s.session_date >= ?'; params.push(filters.start_date); }
+  if (filters.end_date)   { sql += ' AND s.session_date <= ?'; params.push(filters.end_date); }
   const [rows] = await pool.query(sql, params);
   return rows[0];
 };
@@ -287,16 +276,13 @@ export const getStudentsBelow75 = async (filters = {}) => {
     WHERE u.role = 'student'
   `;
   const params = [];
-
   if (filters.department) { sql += ' AND u.department = ?'; params.push(filters.department); }
   if (filters.semester)   { sql += ' AND u.semester = ?';   params.push(filters.semester); }
-
   sql += `
     GROUP BY u.id
     HAVING attendance_pct < 75
     ORDER BY attendance_pct ASC
   `;
-
   const [rows] = await pool.query(sql, params);
   return rows;
 };
