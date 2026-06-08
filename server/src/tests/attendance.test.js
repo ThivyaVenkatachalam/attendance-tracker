@@ -88,7 +88,8 @@ describe('PATCH /api/attendance/:recordId — OCC', () => {
 
 describe('POST /api/attendance/import — CSV idempotency', () => {
   it('uploading same CSV twice produces no duplicates', async () => {
-    const csv = `student_id,session_id,status\n1,1,present\n2,1,absent`;
+    const csv = `roll_no,session_id,status\nCS2301,1,present\nCS2302,1,absent`;
+    
     const buf = Buffer.from(csv);
 
     const upload = () =>

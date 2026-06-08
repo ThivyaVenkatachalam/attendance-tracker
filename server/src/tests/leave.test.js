@@ -12,9 +12,10 @@ const loginAs = async (email, password) => {
 beforeAll(async () => {
   studentToken = await loginAs('arun.kumar@student.edu', 'Test@1234');
   adminToken   = await loginAs('admin@college.edu', 'Test@1234');
+  // Arun Kumar is student_id = 17, clean up any existing test leave requests
   await pool.query(
     `DELETE FROM leave_requests
-     WHERE student_id = 5
+     WHERE student_id = 17
        AND start_date >= '2025-06-10'
        AND end_date <= '2025-06-13'`
   );

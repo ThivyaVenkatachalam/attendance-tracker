@@ -89,13 +89,6 @@ export const createTimetableSession = async (payload, createdBy) => {
 
 // ─── Mark / Update Attendance (OCC) ─────────────────────────────────────────
 
-/**
- * Mark attendance for a single student in a session.
- * Uses Optimistic Concurrency Control:
- * - Client sends current `version` with the update request
- * - Server runs: UPDATE ... WHERE id = ? AND version = ?
- * - If affectedRows = 0 → someone else updated first → 409 Conflict
- */
 export const markAttendance = async ({ session_id, student_id, status }, markedBy) => {
   const session = await attendanceModel.findSessionById(session_id);
   if (!session) throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
@@ -243,8 +236,9 @@ export const bulkMarkAttendance = async (sessionId, records, markedBy) => {
 
 /**
  * Parse and import a CSV file.
- * Expected columns: student_id, session_id, status
+ * Expected columns: roll_no (or student_id), session_id, status
  * Returns per-row result: { imported, skipped, errors }
+ * Admin bypasses department/semester enrollment check.
  */
 export const importFromCSV = async (fileBuffer, importedBy) => {
   let rows;
@@ -293,12 +287,15 @@ export const importFromCSV = async (fileBuffer, importedBy) => {
       continue;
     }
 
-    if (student.department !== session.department || Number(student.semester) !== Number(session.semester)) {
+    // Admin bypasses department/semester enrollment check
+    if (importedBy.role !== 'admin' &&
+        (student.department !== session.department || Number(student.semester) !== Number(session.semester))) {
       results.errors.push({ row: rowNum, reason: `Student ${student.roll_no} is not enrolled in session ${session.id}` });
       results.skipped++;
       continue;
     }
 
+    // Faculty can only import for their assigned sessions
     if (importedBy.role === 'faculty') {
       const assigned = await sessionModel.isFacultyAssignedToSession(importedBy.id, session.id);
       if (!assigned) {
@@ -317,33 +314,34 @@ export const importFromCSV = async (fileBuffer, importedBy) => {
   }
 
   if (valid.length > 0) {
-  // Check which records already exist
-  for (const record of valid) {
-    const existing = await attendanceModel.findRecordBySessionAndStudent(
-      record.session_id,
-      record.student_id
-    );
-    if (existing) {
-      results.skipped++;
-    } else {
-      results.imported++;
+    // Check which records already exist (idempotency)
+    for (const record of valid) {
+      const existing = await attendanceModel.findRecordBySessionAndStudent(
+        record.session_id,
+        record.student_id
+      );
+      if (existing) {
+        results.skipped++;
+      } else {
+        results.imported++;
+      }
     }
+
+    await attendanceModel.bulkUpsertRecords(valid);
+
+    const sessionIds = [...new Set(valid.map((r) => r.session_id))];
+    const [sessions] = await pool.query(
+      'SELECT DISTINCT department, semester FROM sessions WHERE id IN (?)',
+      [sessionIds]
+    );
+    await Promise.all(sessions.map((session) =>
+      notificationService.sendLowAttendanceAlerts({
+        filters: { department: session.department, semester: session.semester },
+        triggeredBy: importedBy.id,
+      })
+    ));
   }
 
-  await attendanceModel.bulkUpsertRecords(valid);
-
-  const sessionIds = [...new Set(valid.map((r) => r.session_id))];
-  const [sessions] = await pool.query(
-    'SELECT DISTINCT department, semester FROM sessions WHERE id IN (?)',
-    [sessionIds]
-  );
-  await Promise.all(sessions.map((session) =>
-    notificationService.sendLowAttendanceAlerts({
-      filters: { department: session.department, semester: session.semester },
-      triggeredBy: importedBy.id,
-    })
-  ));
-}
   return results;
 };
 
